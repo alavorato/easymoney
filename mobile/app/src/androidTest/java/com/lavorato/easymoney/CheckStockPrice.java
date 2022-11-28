@@ -67,7 +67,6 @@ public class CheckStockPrice {
             t.add(new Stock("GGBR3F",0,0));
         }
 
-
         UiScrollable appViews2= new UiScrollable(new UiSelector().scrollable(true));
         appViews2.setAsVerticalList();
 
