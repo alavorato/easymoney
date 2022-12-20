@@ -38,8 +38,9 @@ public class CheckStockPrice {
         float tax = 0;
         UiDevice mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         ArrayList<Stock> t = new ArrayList<>();
-
-        String filename = "/data/local/tmp/fileInfo.txt";
+        String day = LocalDateTime.now().getYear()+"-"+LocalDateTime.now().getMonth().getValue()+"-"+LocalDateTime.now().getDayOfMonth();
+        Log.i("STOCK_INFO","Data: "+day);
+        String filename = "/data/local/tmp/fileInfo_2022-12-06.txt";
         File file = new File(filename);
 
         if(file.exists()){
@@ -48,8 +49,19 @@ public class CheckStockPrice {
                 String line;
                 while ((line = br.readLine()) != null) {
                     Log.i("STOCK_INFO","file line: "+line);
-                    String info[] = line.split(" ");
-                    t.add(new Stock(info[0],Integer.parseInt(info[1]),Float.parseFloat(info[2])));
+                    if(line.contains("Comprado")){
+                        String info[] = line.split(" ");
+                        totalMoney = Float.parseFloat(info[1]);
+                    }else if(line.contains("Vendido")) {
+                        String info[] = line.split(" ");
+                        totalMoneyEarned = Float.parseFloat(info[1]);
+                    }else if(line.contains("Lucro")){
+                        String info[] = line.split(" ");
+                        totalProfit = Float.parseFloat(info[1]);
+                    }else if(!line.contains("Vendido") && !line.contains("Comprado") && !line.contains("Lucro") && !line.contains("Investido")){
+                        String info[] = line.split(" ");
+                        t.add(new Stock(info[0], Integer.parseInt(info[1]), Float.parseFloat(info[2])));
+                    }
                 }
                 br.close();
             }catch (IOException e) {
@@ -57,11 +69,11 @@ public class CheckStockPrice {
             }
         }else{
             t.add(new Stock("VIIA3F",0,0));
-            t.add(new Stock("ABEV3",0,0));
+            t.add(new Stock("ABEV3F",0,0));
             t.add(new Stock("CSMG3F",0,0));
             t.add(new Stock ("CSNA3F",0,0));
             t.add(new Stock("ELET3F",0,0));
-            t.add(new Stock("PETR3",0,0));
+            t.add(new Stock("PETR3F",0,0));
             t.add(new Stock("TUPY3F",0,0));
             t.add(new Stock("SBFG3F",0,0));
             t.add(new Stock("GGBR3F",0,0));
@@ -73,27 +85,39 @@ public class CheckStockPrice {
         while(testLoop < 4000){
             for (int i=0;i<t.size();i++){
 
+                UiObject noInternet = mDevice.findObject(new UiSelector().textContains("Sem conexão"));
+                UiObject serverError = mDevice.findObject(new UiSelector().textContains("Falha de comunicação"));
+
+                if(noInternet.exists() || serverError.exists()){
+                    Log.i("STOCK_INFO","Sem internet ou falha do servidor");
+                    Thread.sleep(10000);
+                    continue;
+                }
                 appViews2.scrollIntoView(new UiSelector().text(t.get(i).name));
 
                 UiObject icon3 = mDevice.findObject(new UiSelector().text(t.get(i).name));
                 if(icon3.exists())
-                    icon3.clickAndWaitForNewWindow();
+                    icon3.click();
                 else
                     continue;
 
-                Thread.sleep(2000);
-                UiObject icon4 = mDevice.findObject(new UiSelector().textContains(","));
+                //Thread.sleep(2000);
+                UiObject stockName = mDevice.findObject(new UiSelector().text(t.get(i).name));
+                UiObject stockValue = mDevice.findObject(new UiSelector().textContains(","));
+                String price = stockValue.getText();
 
-                Log.i("STOCK_INFO","Stock: "+t.get(i).name+" Preço: "+icon4.getText());
+                if(!stockName.exists() && !stockValue.getText().contains("R$"))
+                    break;
+
+                Log.i("STOCK_INFO","Stock: "+t.get(i).name+" Preço: "+price);
                 Log.i("STOCK_INFO","Stock: "+t.get(i).name+" quantidade: "+t.get(i).number);
-                float currPrice = Float.parseFloat(icon4.getText().replace("R$ ","").replace(",","."));
+                float currPrice = Float.parseFloat(stockValue.getText().replace("R$ ","").replace(",","."));
                 Log.i("STOCK_INFO","Stock: "+t.get(i).name+" valor Médio: "+t.get(i).unitPriceMed);
-                Log.i("STOCK_INFO","Stock: "+t.get(i).name+" Situacao: "+((t.get(i).unitPriceMed*t.get(i).number)-(t.get(i).number*currPrice)));
+                Log.i("STOCK_INFO","Stock: "+t.get(i).name+" Situacao: "+((t.get(i).number*currPrice)-(t.get(i).unitPriceMed*t.get(i).number)));
                 Log.i("STOCK_INFO", "Total gasto até o momento: " + totalMoney);
                 Log.i("STOCK_INFO", "Total vendido até o momento: " + totalMoneyEarned);
                 Log.i("STOCK_INFO", "Total investido até o momento: " + (totalMoney - totalMoneyEarned));
                 Log.i("STOCK_INFO", "Total de lucro bruto até o momento: " + totalProfit);
-                Log.i("STOCK_INFO", "Total de taxa: " + tax);
                 Log.i("STOCK_INFO", "Total de lucro - tax: " + (totalProfit - tax));
 
                 //porcentagem de variacao de uma leitura para outra em relacão a preço
@@ -113,7 +137,38 @@ public class CheckStockPrice {
                     Log.i("STOCK_INFO"," Queda de : "+percVar+ "% objetivo: -"+percToBuy+"%");
                     if((percVar*(-1)) >= percToBuy && buyStatus == true){
                         if(((totalMoney-totalMoneyEarned) + (currPrice*stockNumberForOpen)) < limitToInvest) {
-                            if (t.get(i).priceDownSeqNumber < 5) {
+                            if (t.get(i).priceDownSeqNumber < 5 && t.get(i).number < 25) {
+
+                                //if(t.get(i).name.equals("VIIA3F")){
+                                    UiObject buy = mDevice.findObject(new UiSelector().text("COMPRA"));
+
+                                    if(buy.exists()){
+                                        buy.clickAndWaitForNewWindow();
+                                        UiObject qtd = mDevice.findObject(new UiSelector().text("Quantidade"));
+                                        while(!qtd.exists())
+                                            Thread.sleep(100);
+
+                                        UiObject stockNum = mDevice.findObject(new UiSelector().text("1"));
+                                        if(stockNum.exists())
+                                            stockNum.setText(String.valueOf(stockNumberForOpen));
+                                        Thread.sleep(500);
+
+                                        UiObject buyEnd = mDevice.findObject(new UiSelector().text("Comprar"));
+                                        Log.i("STOCK_INFO", "Checando compra: "+ price);
+                                        UiObject checkValue = mDevice.findObject(new UiSelector().text(price));
+                                        if(buyEnd.exists() && checkValue.exists()) {
+                                            Log.i("STOCK_INFO", "Preço não alterou, compra realizada: "+checkValue.getText());
+                                            //buyEnd.clickAndWaitForNewWindow();
+                                        }else{
+                                            Log.i("STOCK_INFO", "Erro");
+                                        }
+                                        Thread.sleep(1000);
+                                        //mDevice.pressBack();
+                                        mDevice.pressBack();
+                                    }
+
+                                //}
+
                                 Log.i("STOCK_INFO", "---Compra " + t.get(i).name + " porcentagem queda = " + percVar + " value: " + (currPrice * stockNumberForOpen));
                                 Log.i("STOCK_INFO", "Preço médio unitario antes da compra: " + t.get(i).unitPriceMed);
                                 t.get(i).unitPriceMed = ((t.get(i).unitPriceMed * t.get(i).number) + (currPrice * stockNumberForOpen)) / (t.get(i).number + stockNumberForOpen);
@@ -122,7 +177,7 @@ public class CheckStockPrice {
                                 totalMoney = totalMoney + (currPrice * stockNumberForOpen);
                                 tax = tax + ((currPrice * stockNumberForOpen) * 0.0325F) / 100;
                             } else {
-                                Log.e("STOCK_INFO", "Stock  " + t.get(i).name + "com queda sequencial de preço: " + t.get(i).priceDownSeqNumber);
+                                Log.e("STOCK_INFO", "Stock  " + t.get(i).name + "com queda sequencial (5) de preço ou limite de cotas atingido (25) : " + t.get(i).priceDownSeqNumber+" / "+t.get(i).number);
                             }
                         }else{
                             Log.i("STOCK_INFO","Limite seria ultrapassado: "+((totalMoney-totalMoneyEarned) + (currPrice*stockNumberForOpen)) +"/"+limitToInvest);
@@ -131,6 +186,38 @@ public class CheckStockPrice {
                         Log.i("STOCK_INFO"," Não atendeu objetivos - Queda de "+percVar+ "% objetivo: -"+percToBuy+"%");
                     }
                 }else if (percVarMedUnit >= percToSell && t.get(i).number > 0) {
+
+                    //if(t.get(i).name.equals("VIIA3F")){
+                        UiObject sell = mDevice.findObject(new UiSelector().text("VENDA"));
+
+                        if(sell.exists()){
+                            sell.clickAndWaitForNewWindow();
+                            UiObject qtd = mDevice.findObject(new UiSelector().text("Quantidade"));
+                            while(!qtd.exists())
+                                Thread.sleep(500);
+
+                            UiObject stockNum = mDevice.findObject(new UiSelector().text("1"));
+                            if(stockNum.exists())
+                                stockNum.setText(String.valueOf(t.get(i).number));
+                            Thread.sleep(500);
+                            UiObject sellEnd = mDevice.findObject(new UiSelector().text("Vender"));
+                            Log.i("STOCK_INFO", "Checando venda: "+ price);
+                            UiObject checkValue = mDevice.findObject(new UiSelector().text(price));
+
+                            if(sellEnd.exists() && checkValue.exists()){
+                                //sellEnd.clickAndWaitForNewWindow();
+                                Log.i("STOCK_INFO", "Preço não alterou, venda realizada: "+checkValue.getText());
+                            }else {
+                                Log.i("STOCK_INFO", "erro");
+                            }
+
+                            Thread.sleep(1000);
+                            //mDevice.pressBack();
+                            mDevice.pressBack();
+                        }
+
+                    //}
+
                     Log.i("STOCK_INFO", "---Venda " + t.get(i).name + "perc = " + percVar + " value: " + (currPrice * t.get(i).number));
                     t.get(i).profit = t.get(i).profit + (currPrice * t.get(i).number) - ( t.get(i).unitPriceMed * t.get(i).number);
                     Log.i("STOCK_INFO", "Lucro com a stock: " + t.get(i).profit);
@@ -142,13 +229,15 @@ public class CheckStockPrice {
                     totalProfit = totalProfit + t.get(i).profit ;
 
                 }else{
-                    Log.i("STOCK_INFO","-- NENHUMA OPERAÇÃO --");
                     Log.i("STOCK_INFO"," Preço em Alta: "+percVar+ "% objetivo: +"+percToSell+"%");
+                    Log.i("STOCK_INFO","-- NENHUMA OPERAÇÃO --");
                 }
                 if (percVar <0){
                     t.get(i).priceDownSeqNumber = t.get(i).priceDownSeqNumber++;
+                    t.get(i).priceUpSeqNumber=0;
                 }else{
                     t.get(i).priceDownSeqNumber = 0;
+                    t.get(i).priceUpSeqNumber = t.get(i).priceUpSeqNumber++;
                 }
 
                 if (LocalDateTime.now().getHour() == 16 && LocalDateTime.now().getMinute() > 30) {
@@ -166,12 +255,19 @@ public class CheckStockPrice {
                 t.get(i).lastPrice = currPrice;
 
                 mDevice.pressBack();
+
+                String filToEndName = "/data/local/tmp/end.txt";
+                File fileToEnd = new File(filToEndName);
+                if(fileToEnd.exists())
+                    System.exit(0);
+
                 Thread.sleep(2000);
                 mDevice.swipe(540,660,540,1800,2);
             }
+
             testLoop++;
         }
-
+        Log.i("STOCK_INFO","FIM");
     }
 }
 
