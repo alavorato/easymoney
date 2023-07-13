@@ -319,25 +319,6 @@ def init(args=None):
     statusVar.set("Executando...")
 
 if __name__ == "__main__":
-
-    abev = Ticker("TUPY3.SA")
-    abev2 = abev.history(start='2022-12-09', end='2022-12-10',  interval = "1m")
-    df = pd.DataFrame(abev2)
-    reset_df = df.reset_index()
-    print(reset_df)
-
-    listDate = reset_df['date']
-
-    listX = []
-    for d in listDate:
-        #print(str(d).partition(' '))
-        listX.append(str(d).partition(' ')[2][0:5])
-    
-
-    xpoints = np.array(listX)    
-    ypoints = np.array(reset_df['close'])
-
-    #print(ypoints)
     
     window=Tk()
     # add widgets here
