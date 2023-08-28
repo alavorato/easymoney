@@ -31,6 +31,7 @@ public class CheckStockPrice {
         float stockNumberForOpen = 5;
         boolean buyStatus = true;
         int testLoop = 0;
+        int limitStockNumber = 20;
         float totalMoney = 0;
         float totalMoneyEarned = 0;
         float totalProfit = 0;
@@ -57,11 +58,11 @@ public class CheckStockPrice {
             }
         }else{
             t.add(new Stock("VIIA3F",0,0));
-            t.add(new Stock("ABEV3",0,0));
+            t.add(new Stock("ABEV3F",0,0));
             t.add(new Stock("CSMG3F",0,0));
             t.add(new Stock ("CSNA3F",0,0));
             t.add(new Stock("ELET3F",0,0));
-            t.add(new Stock("PETR3",0,0));
+            t.add(new Stock("PETR3F",0,0));
             t.add(new Stock("TUPY3F",0,0));
             t.add(new Stock("SBFG3F",0,0));
             t.add(new Stock("GGBR3F",0,0));
@@ -89,7 +90,8 @@ public class CheckStockPrice {
                 Log.i("STOCK_INFO","Stock: "+t.get(i).name+" quantidade: "+t.get(i).number);
                 float currPrice = Float.parseFloat(icon4.getText().replace("R$ ","").replace(",","."));
                 Log.i("STOCK_INFO","Stock: "+t.get(i).name+" valor Médio: "+t.get(i).unitPriceMed);
-                Log.i("STOCK_INFO","Stock: "+t.get(i).name+" Situacao: "+((t.get(i).unitPriceMed*t.get(i).number)-(t.get(i).number*currPrice)));
+                float situacao = (t.get(i).number * currPrice) - (t.get(i).unitPriceMed * t.get(i).number);
+                Log.i("STOCK_INFO","Stock: "+t.get(i).name+" Situacao: "+situacao);
                 Log.i("STOCK_INFO", "Total gasto até o momento: " + totalMoney);
                 Log.i("STOCK_INFO", "Total vendido até o momento: " + totalMoneyEarned);
                 Log.i("STOCK_INFO", "Total investido até o momento: " + (totalMoney - totalMoneyEarned));
@@ -114,7 +116,7 @@ public class CheckStockPrice {
                     Log.i("STOCK_INFO"," Queda de : "+percVar+ "% objetivo: -"+percToBuy+"%");
                     if((percVar*(-1)) >= percToBuy && buyStatus == true){
                         if(((totalMoney-totalMoneyEarned) + (currPrice*stockNumberForOpen)) < limitToInvest) {
-                            if (t.get(i).priceDownSeqNumber < 5) {
+                            if (t.get(i).priceDownSeqNumber < 5 && t.get(i).number <= limitStockNumber) {
                                 Log.i("STOCK_INFO", "---Compra " + t.get(i).name + " porcentagem queda = " + percVar + " value: " + (currPrice * stockNumberForOpen));
                                 Log.i("STOCK_INFO", "Preço médio unitario antes da compra: " + t.get(i).unitPriceMed);
                                 t.get(i).unitPriceMed = ((t.get(i).unitPriceMed * t.get(i).number) + (currPrice * stockNumberForOpen)) / (t.get(i).number + stockNumberForOpen);
@@ -146,10 +148,14 @@ public class CheckStockPrice {
                     Log.i("STOCK_INFO","-- NENHUMA OPERAÇÃO --");
                     Log.i("STOCK_INFO"," Preço em Alta: "+percVar+ "% objetivo: +"+percToSell+"%");
                 }
-                if (percVar <0){
-                    t.get(i).priceDownSeqNumber = t.get(i).priceDownSeqNumber++;
+                if (percVar < 0){
+                    t.get(i).priceUpSeqNumber = 0;
+                    if(t.get(i).priceDownSeqNumber != 0)
+                        t.get(i).priceDownSeqNumber = t.get(i).priceDownSeqNumber++;
                 }else{
                     t.get(i).priceDownSeqNumber = 0;
+                    if(t.get(i).priceUpSeqNumber != 0)
+                        t.get(i).priceUpSeqNumber = t.get(i).priceUpSeqNumber++;
                 }
 
                 if (LocalDateTime.now().getHour() == 16 && LocalDateTime.now().getMinute() > 30) {
