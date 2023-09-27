@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from matplotlib.dates import DateFormatter
 
-def ler_arquivo(nome_arquivo, stock):
+def ler_arquivo(nome_arquivo, stock, oprType):
     datas = []
     precos = []
 
@@ -12,11 +12,11 @@ def ler_arquivo(nome_arquivo, stock):
         for linha in linhas:
             partes = linha.split()
 
-            if len(partes) == 11 and partes[6] == 'Stock:' and partes[7] == stock and partes[8] == 'Preço:':
+            if len(partes) == 15 and partes[6] == 'Stock:' and partes[7] == stock and partes[10] == oprType+':':
                 data_hora = datetime.strptime(partes[1], '%H:%M:%S.%f')
 
                 try:
-                    preco = float(partes[10].replace('R$', '').replace(',', '.'))
+                    preco = float(partes[11].replace('R$', '').replace(',', '.'))
                 except ValueError:
                     continue
 
@@ -30,7 +30,6 @@ def calcular_variacoes_percentuais(precos):
     for i in range(1, len(precos)):
         variacao = (precos[i] - precos[i-1]) / precos[i-1] * 100
         variacoes.append(variacao)
-    print(variacoes)
     return variacoes
 
 def achar_venda_seguinte(pos,vendas):
@@ -39,7 +38,7 @@ def achar_venda_seguinte(pos,vendas):
             return vendas[i]
 
 
-def gerar_grafico(datas, precos, variacoes, stock):
+def gerar_grafico(datas, precos, variacoes, stock, precosVenda):
     plt.plot(datas, precos, '-o', color='black', markersize=4)
     plt.xlabel('Hora e Minuto')
     plt.ylabel('Preço')
@@ -49,6 +48,14 @@ def gerar_grafico(datas, precos, variacoes, stock):
     pontosDeVenda = []
     todosPontos = []
 
+    numStockPorcompra = 5
+    mediaPreco = 0;
+
+    totalCompra = 0
+    totalVenda = 0
+    totalStock = 0
+    variacaoParaVenda = 0
+
     
     # Formatar o eixo x para exibir somente as horas e minutos
     formatter = DateFormatter('%H:%M')
@@ -57,31 +64,24 @@ def gerar_grafico(datas, precos, variacoes, stock):
     for i, variacao in enumerate(variacoes):
         if i > 0 and variacao <= -0.1:
             plt.plot(datas[i+1], precos[i+1], 'bo', markersize=6)
-            pontosDeCompra.append(i+1)
-            todosPontos.append(i+1)
-        if i > 1 and variacao > 0.1:
-            plt.plot(datas[i+1], precos[i+1], 'bo', markersize=6, color= 'red')
-            pontosDeVenda.append(i+1)
-            todosPontos.append(i+1)
-        
-    
-    totalCompra = 0
-    totalVenda = 0
-    totalStock = 0
-    lucro = 0
-    print(pontosDeCompra)
-    print("\n")
-    print(pontosDeVenda)
-    for i in range(0, len(todosPontos)-4):
-        if todosPontos[i] in pontosDeCompra:
-            print("comprei no ponto "+str(todosPontos[i]))
-            totalCompra += precos[todosPontos[i]]*100
-            totalStock +=100
-        if todosPontos[i] in pontosDeVenda and totalStock > 0:
-            print("vendi no ponto "+str(todosPontos[i]))
-            totalVenda += precos[todosPontos[i]]*totalStock
+            #pontosDeCompra.append(i+1)
+            #todosPontos.append(i+1)
+            print("comprei no ponto "+str(datas[i+1]))
+            mediaPreco = (mediaPreco * totalStock + (precos[i+1] * numStockPorcompra)) / (totalStock + numStockPorcompra)
+            totalStock += numStockPorcompra
+            totalCompra += precos[i+1]*numStockPorcompra
+        if mediaPreco > 0:
+            variacaoParaVenda = (precosVenda[i+1] - mediaPreco) * 100 / mediaPreco
+        if i > 1 and precosVenda[i+1] > mediaPreco and totalStock > 0:
+            plt.plot(datas[i+1], precosVenda[i+1], 'rs', markersize=6, color= 'red')
+            #pontosDeVenda.append(i+1)
+            #todosPontos.append(i+1)
+            print("Vendi no ponto "+str(datas[i+1]))
+            totalVenda += precosVenda[i+1]*totalStock
             totalStock = 0
-        print("compras : "+str(totalCompra)+ " vendas: "+str(totalVenda)+" Lucro: "+str(totalVenda - totalCompra)+" totaldeAcoes: "+str(totalStock))
+        
+
+    print("compras : "+str(totalCompra)+ " vendas: "+str(totalVenda)+" Lucro: "+str(totalVenda - totalCompra)+" totaldeAcoes: "+str(totalStock))
 
 
     plt.text(datas[0], max(precos), 'Lucro: '+str(totalVenda - totalCompra), ha='left', va='center', color='green')
@@ -89,15 +89,20 @@ def gerar_grafico(datas, precos, variacoes, stock):
     plt.show()
 
 # Nome do arquivo que contém os dados da ação
-arquivo = '/home/lavorato/Desktop/EasyMoney/easymoney/python/history_2023-04-18.txt'
+arquivo = '/home/lavorato/Desktop/EasyMoney/easymoney/python/history_2023-09-11.txt'
 # Nome da ação desejada
-stock_desejada = 'ELET3F'
+stock_desejada = 'ABEV3F'
 
 # Ler o arquivo e extrair as informações para a ação desejada
-datas, precos = ler_arquivo(arquivo, stock_desejada)
+datas, precosCompra = ler_arquivo(arquivo, stock_desejada,"Compra")
+#print(precosCompra)
+
+datas, precosVenda = ler_arquivo(arquivo, stock_desejada,"Venda")
+#print(precosVenda)
 
 # Calcular as variações percentuais em relação ao ponto anterior
-variacoes = calcular_variacoes_percentuais(precos)
+variacoes = calcular_variacoes_percentuais(precosCompra)
+print(len(variacoes))
 
 # Gerar o gráfico com a marcação dos pontos de redução
-gerar_grafico(datas, precos, variacoes,stock_desejada)
+gerar_grafico(datas, precosCompra, variacoes,stock_desejada,precosVenda)

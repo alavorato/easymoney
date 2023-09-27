@@ -264,7 +264,7 @@ def getInfoPeriodic():
     while execDump == 1:
         print("Listening...")
         time.sleep(60)
-        extractInfoFromLog()
+        #extractInfoFromLog()
     print("Encerrando getInfo")
 
 def start():
@@ -314,8 +314,8 @@ def init(args=None):
     x = threading.Thread(target=readLogsFromAndroid, args=(device,))
     x.start()
 
-    x = threading.Thread(target=getInfoPeriodic)
-    x.start()
+    #x = threading.Thread(target=getInfoPeriodic)
+    #x.start()
     statusVar.set("Executando...")
 
 if __name__ == "__main__":
