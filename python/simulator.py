@@ -40,6 +40,7 @@ def achar_venda_seguinte(pos,vendas):
 
 def gerar_grafico(datas, precos, variacoes, stock, precosVenda):
     plt.plot(datas, precos, '-o', color='black', markersize=4)
+    plt.plot(datas, precosVenda, '-o', color='green', markersize=4)
     plt.xlabel('Hora e Minuto')
     plt.ylabel('Preço')
     plt.title('Variação do preço da ação '+stock)
@@ -72,12 +73,15 @@ def gerar_grafico(datas, precos, variacoes, stock, precosVenda):
             totalCompra += precos[i+1]*numStockPorcompra
         if mediaPreco > 0:
             variacaoParaVenda = (precosVenda[i+1] - mediaPreco) * 100 / mediaPreco
-        if i > 1 and precosVenda[i+1] > mediaPreco and totalStock > 0:
-            plt.plot(datas[i+1], precosVenda[i+1], 'rs', markersize=6, color= 'red')
+            
+        if i > 1 and variacaoParaVenda > 0.1 and totalStock > 0:
+            plt.plot(datas[i+1], precosVenda[i+1], 'rs', markersize=6)
+            print("Variacao para venda "+str(variacaoParaVenda))
             #pontosDeVenda.append(i+1)
             #todosPontos.append(i+1)
-            print("Vendi no ponto "+str(datas[i+1]))
+            print("Vendi no ponto "+str(datas[i+1])+ " a preco "+str(precosVenda[i+1])+ " media: "+str(mediaPreco))
             totalVenda += precosVenda[i+1]*totalStock
+            print("total de vendas: "+str(totalVenda))
             totalStock = 0
         
 
@@ -91,7 +95,7 @@ def gerar_grafico(datas, precos, variacoes, stock, precosVenda):
 # Nome do arquivo que contém os dados da ação
 arquivo = '/home/lavorato/Desktop/EasyMoney/easymoney/python/history_2023-09-11.txt'
 # Nome da ação desejada
-stock_desejada = 'ABEV3F'
+stock_desejada = 'CSNA3F'
 
 # Ler o arquivo e extrair as informações para a ação desejada
 datas, precosCompra = ler_arquivo(arquivo, stock_desejada,"Compra")
